@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>山城 · 8D 程序化城市生成器 — 重庆</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🌆</text></svg>">
+<link rel="stylesheet" href="css/style.css?v=14">
+<script type="importmap">
+{ "imports": { "three": "./vendor/three.module.js" } }
+</script>
+</head>
+<body>
+<canvas id="viewport"></canvas>
+
+<header id="topbar">
+  <div class="brand">
+    <span class="brand-zh">山城 · 8D</span>
+    <span class="brand-en">PROCEDURAL CHONGQING</span>
+  </div>
+  <div class="top-actions">
+    <button id="btn-regen" class="btn primary">⟳ 重新生成</button>
+    <button id="btn-shot" class="btn">📷 截图</button>
+  </div>
+</header>
+
+<aside id="panel">
+  <div class="panel-head">
+    <h2>参数面板</h2>
+    <span id="seed-badge">SEED 8888</span>
+  </div>
+
+  <section class="group">
+    <h3>随机种子</h3>
+    <div class="row">
+      <input type="number" id="seed" value="8888" min="0" max="999999">
+      <button id="btn-dice" class="btn icon" title="随机">🎲</button>
+    </div>
+  </section>
+
+  <section class="group">
+    <h3>地形 · 世界</h3>
+    <label class="slider-row">山地起伏 <span class="val" id="v-rugged">0.65</span>
+      <input type="range" id="rugged" min="0.2" max="1.2" step="0.01" value="0.65"></label>
+    <label class="slider-row">河道宽度 <span class="val" id="v-river">1.00</span>
+      <input type="range" id="river" min="0.6" max="1.6" step="0.01" value="1.00"></label>
+    <label class="slider-row">台地高差 <span class="val" id="v-terrace">0.60</span>
+      <input type="range" id="terrace" min="0" max="1" step="0.01" value="0.60"></label>
+    <label class="slider-row">公园绿地 <span class="val" id="v-parks">0.18</span>
+      <input type="range" id="parks" min="0" max="0.6" step="0.01" value="0.18"></label>
+  </section>
+
+  <section class="group">
+    <h3>城市 · 布局</h3>
+    <label class="slider-row">城市规模 <span class="val" id="v-citySize">1.00</span>
+      <input type="range" id="citySize" min="0.55" max="1.3" step="0.01" value="1.00"></label>
+    <label class="slider-row">建筑密度 <span class="val" id="v-density">0.72</span>
+      <input type="range" id="density" min="0.15" max="1" step="0.01" value="0.72"></label>
+    <label class="slider-row">街区尺寸 <span class="val" id="v-block">17</span>
+      <input type="range" id="block" min="10" max="34" step="1" value="17"></label>
+    <label class="slider-row">街道形态
+      <select id="streetPattern">
+        <option value="radial">放射环网（山城）</option>
+        <option value="grid">棋盘格网</option>
+        <option value="organic">自由曲线（顺山）</option>
+      </select></label>
+  </section>
+
+  <section class="group">
+    <h3>天际线 · 建筑</h3>
+    <label class="slider-row">楼宇高度 <span class="val" id="v-height">1.00</span>
+      <input type="range" id="height" min="0.5" max="1.8" step="0.01" value="1.00"></label>
+    <label class="slider-row">高度离散 <span class="val" id="v-variance">0.70</span>
+      <input type="range" id="variance" min="0.1" max="1.5" step="0.01" value="0.70"></label>
+    <label class="slider-row">霓虹灯光 <span class="val" id="v-neon">1.00</span>
+      <input type="range" id="neon" min="0.2" max="2" step="0.01" value="1.00"></label>
+    <label class="check-row">洪崖洞吊脚楼 <input type="checkbox" id="hongya" checked></label>
+    <label class="check-row">解放碑地标 <input type="checkbox" id="monument" checked></label>
+  </section>
+
+  <section class="group">
+    <h3>交通 · 8D 立体</h3>
+    <label class="slider-row">立交层数 <span class="val" id="v-levels">3</span>
+      <input type="range" id="levels" min="2" max="5" step="1" value="3"></label>
+    <label class="slider-row">轻轨速度 <span class="val" id="v-railspeed">1.00</span>
+      <input type="range" id="railspeed" min="0" max="3" step="0.05" value="1.00"></label>
+    <label class="check-row">长江索道 <input type="checkbox" id="cable" checked></label>
+    <label class="check-row">车流动画 <input type="checkbox" id="traffic" checked></label>
+  </section>
+
+  <section class="group">
+    <h3>氛围</h3>
+    <div class="seg" id="tod">
+      <button data-tod="dawn">晨雾</button>
+      <button data-tod="day">白天</button>
+      <button data-tod="dusk">黄昏</button>
+      <button data-tod="night" class="on">夜景</button>
+    </div>
+    <label class="slider-row">雾气浓度 <span class="val" id="v-fog">0.35</span>
+      <input type="range" id="fog" min="0" max="1" step="0.01" value="0.35"></label>
+    <label class="check-row">自动旋转 <input type="checkbox" id="autorotate"></label>
+  </section>
+
+  <section class="group">
+    <h3>灯光</h3>
+    <label class="slider-row">曝光 <span class="val" id="v-exposure">1.05</span>
+      <input type="range" id="exposure" min="0.3" max="2" step="0.01" value="1.05"></label>
+    <label class="slider-row">太阳高度 <span class="val" id="v-sun">0.45</span>
+      <input type="range" id="sun" min="0.05" max="1" step="0.01" value="0.45"></label>
+    <label class="slider-row">环境补光 <span class="val" id="v-ambient">0.55</span>
+      <input type="range" id="ambient" min="0.05" max="1.5" step="0.01" value="0.55"></label>
+  </section>
+
+  <section class="group">
+    <h3>视角</h3>
+    <div class="seg" id="viewpreset">
+      <button data-view="orbit" class="on">环绕</button>
+      <button data-view="overhead">俯瞰</button>
+      <button data-view="riverside">江畔</button>
+      <button data-view="rail">穿楼</button>
+    </div>
+  </section>
+
+  <div class="panel-foot" id="stats">生成中…</div>
+</aside>
+
+<div id="hint">左键旋转 · 滚轮缩放 · 右键平移 — 调整参数即时生效</div>
+<div id="loading">正在劈山造城…</div>
+
+<script type="module" src="js/main.js?v=14"></script>
+</body>
+</html>
